@@ -1,0 +1,15 @@
+-Wall
+-Wextra
+-Wduplicated-cond
+-Wduplicated-branches
+-Wlogical-op
+-Wrestrict
+-Wnull-dereference
+-Wuseless-cast
+-Wjump-misses-init
+-Wdouble-promotion
+-Wshadow
+-Wformat=2
+-pedantic
+-std=c99
+-I.

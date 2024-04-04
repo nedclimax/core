@@ -1,0 +1,11 @@
+bin/
+*.obj
+*.ilk
+*.exp
+*.pdb
+*.lib
+*.dll
+*.exe
+*.xml
+*.raddbg
+*.nativecodeanalysis*
