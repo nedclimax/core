@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # -DDEV_BUILD -DDEBUG_BUILD -DSLOW_BUILD
-ccflags="-Wall -Wextra -pedantic -std=c99 -I."
+ccflags="-Wall -Wextra -Wpedantic -std=c99 -I."
 ccflags="${ccflags} -Wduplicated-cond -Wduplicated-branches -Wlogical-op"
 ccflags="${ccflags} -Wuseless-cast -Wjump-misses-init -Wdouble-promotion"
 ccflags="${ccflags} -Wrestrict -Wnull-dereference -Wshadow -Wformat=2"

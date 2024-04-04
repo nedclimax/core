@@ -10,6 +10,6 @@
 -Wdouble-promotion
 -Wshadow
 -Wformat=2
--pedantic
+-Wpedantic
 -std=c99
 -I.
