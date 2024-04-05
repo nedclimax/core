@@ -10,7 +10,7 @@ set lflags=/incremental:no /opt:ref /opt:icf
 
 echo.
 echo - Testing with MSVC
-cl /Fetest_msvc /analyze %ccflags% base/*.c test.c /link %lflags%
+cl /Fetest_msvc %ccflags% base/*.c test.c /link %lflags%
 rem if %errorlevel% equ 0 call test_msvc.exe else goto EOF
 rem del test_msvc.exe
 

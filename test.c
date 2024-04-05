@@ -20,37 +20,9 @@ struct Node {
 	int data;
 };
 
-void *reserve_test_malloc(void *ctx, u64 size) {
-	unused_param(ctx);
-	return malloc(size);
-}
-
-void change_mem_noop(void *ctx, void *ptr, u64 size) {
-	unused_param(ctx);
-	unused_param(ptr);
-	unused_param(size);
-}
-
-void release_test_free(void *ctx, void *ptr, u64 size) {
-	unused_param(ctx);
-	unused_param(size);
-	free(ptr);
-}
-
-global Memory_Allocator test_allocator = {
-	NULL,
-	reserve_test_malloc,
-	change_mem_noop,
-	change_mem_noop,
-	release_test_free,
-};
-
 int main(void) {
-	Memory_Arena test_arena = make_arena(&test_allocator);
-
-	u32 node_count = 10;
-	Node *nodes = memory_arena_push(&test_arena, sizeof(Node) * node_count);
-	for (size_t i = 0; i < node_count; i++) {
+	Node nodes[10];
+	for (size_t i = 0; i < array_count(nodes); i++) {
 		nodes[i].data = (int)i;
 	}
 

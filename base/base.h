@@ -237,6 +237,12 @@
 	#define external extern
 #endif
 
+#if LANG_CPP
+	#define C_LITERAL(type) type
+#else
+	#define C_LITERAL(type) (type)
+#endif
+
 #if COMPILER_MSVC
 	#define dllexport external __declspec(dllexport)
 	#define dllimport external __declspec(dllimport)
@@ -416,57 +422,101 @@ C_API f64 tan_f64(f64 f);
 // NOTE: Binary Trees
 ///
 /// TODO
-// NOTE: Dynamic arrays
-///
-/// TODO
 // NOTE: Hash tables
 ///
 
 ///
-// NOTE: Memory arena allocator
+// NOTE Allocator interface
 ///
-typedef void *reserve_func(void *ctx, u64 size);
-typedef void change_mem_func(void *ctx, void *ptr, u64 size);
-
-typedef change_mem_func commit_func;
-typedef change_mem_func decommit_func;
-typedef change_mem_func release_func;
-
 typedef struct {
 	void *context;
-	reserve_func *reserve;
-	commit_func *commit;
-	decommit_func *decommit;
-	release_func *release;
-} Memory_Allocator;
+	void *(*alloc)(u64 size, void *context);
+    void *(*free)(u64 size, void *ptr, void *context);
+} Allocator;
 
+///
+// NOTE: Dynamic arrays
+///
 typedef struct {
-	Memory_Allocator *allocator;
-	u8 *memory;
-	u64 capacity;
-	u64 position;
-	u64 commit_position;
-} Memory_Arena;
+    size_t length;
+    size_t capacity;
+    size_t padding_or_something; // prefer 16-byte alignment
+    Allocator *a;
+} Array_Header;
 
-#define ARENA_DEFAULT_RESERVE_SIZE gigabytes(1)
-#define ARENA_COMMIT_BLOCK_SIZE megabytes(64)
+#define ARRAY_INITIAL_CAPACITY 16
+#define array(T, a) array_init(sizeof(T), ARRAY_INITIAL_CAPACITY, a)
+#define array_header(a) ((Array_Header *)(a) - 1)
+#define array_length(a) (array_header(a)->length)
+#define array_capacity(a) (array_header(a)->capacity)
 
-C_API Memory_Arena make_arena_reserve(Memory_Allocator *allocator, u64 reserve_size);
-C_API Memory_Arena make_arena(Memory_Allocator *allocator);
-C_API void memory_arena_release(Memory_Arena *arena);
-C_API void *memory_arena_push(Memory_Arena *arena, u64 size);
-C_API void memory_arena_pop_to(Memory_Arena *arena, u64 position);
+C_API void *array_init(size_t item_size, size_t capacity, Allocator *a);
+C_API void *array_ensure_capacity(void *a, size_t item_count, size_t item_size);
 
-typedef struct {
-	Memory_Arena *arena;
-	u64 arena_position;
-} Temp_Arena;
+#define array_append(a, v) (                      \
+    (a) = array_ensure_capacity(a, 1, sizeof(v)), \
+    (a)[array_header(a)->length] = (v),           \
+    &(a)[array_header(a)->length++])
 
-Temp_Arena memory_arena_begin_temp(Memory_Arena *arena);
-void memory_arena_end_temp(Temp_Arena temp);
+#define array_remove(a, i) do {         \
+    Array_Header *h = array_header(a);  \
+    if (i == h->length - 1) {           \
+        h->length -= 1;                 \
+    } else if (h->length > 1) {         \
+        void *ptr = &a[i];              \
+        void *last = &a[h->length - 1]; \
+        h->length -= 1;                 \
+        memcpy(ptr, last, sizeof(*a));  \
+    }                                   \
+} while (0);
 
-/// TODO
+#define array_pop_back(a) (array_header(a)->length -= 1)
+
+///
 // NOTE: Strings
 ///
+typedef struct {
+	u64 len;
+	u8 *str;
+} StringU8;
+
+#define stru8(x) C_LITERAL(StringU8){strlen(x), x}
+
+StringU8 str_init(size_t len, Allocator *a);
+StringU8 str_clone(StringU8 s, Allocator *a);
+StringU8 str_join(StringU8 *s, StringU8 join, Allocator *a);
+StringU8 str_concat(StringU8 s1, StringU8 s2, Allocator *a);
+StringU8 *str_split(StringU8 s, StringU8 delimiter, Allocator *a);
+StringU8 *str_split_view(StringU8 s, StringU8 delimiter, Allocator *a);
+StringU8 str_substring(StringU8 s, size_t start, size_t end, Allocator *a);
+StringU8 str_replace(StringU8 s, StringU8 match, StringU8 replacement, Allocator *a);
+
+// NOTE: this does not terminate the string with a 0 as that would destroy the original string.
+StringU8 str_substring_view(StringU8 haystack, StringU8 needle);
+bool str_equal(StringU8 a, StringU8 b);
+bool str_contains(StringU8 haystack, StringU8 needle);
+size_t str_index_of(StringU8 haystack, StringU8 needle);
+StringU8 str_view(StringU8 s, size_t start, size_t end);
+
+///
+// NOTE: Arena allocator
+///
+#define DEFAULT_ALIGNMENT (2 * sizeof(void *))
+
+typedef struct {
+    void *base;
+    size_t size;
+    size_t offset;
+    size_t committed;
+} Arena;
+
+#define arena_alloc_init(a) (Allocator){arena_alloc, arena_free, a}
+
+uintptr_t align_forward(uintptr_t ptr, size_t alignment);
+void *arena_alloc_aligned(Arena *a, size_t size, size_t alignment);
+void *arena_alloc(size_t size, void *context);
+void arena_free(size_t size, void *ptr, void *context);
+void arena_free_all(void *context);
+Arena arena_init(void *buffer, size_t size);
 
 #endif // CORE_BASE_H
